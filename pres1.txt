@@ -1,0 +1,15 @@
+problem explanation & load:
+https://www.sciencedirect.com/science/article/pii/S2352146516000089
+
+charging stations:
+https://www.math.u-bordeaux.fr/~afroger001/documents/The_electric_vehicle_routing_problem_with_capacitated_charging_stations_v3.pdf
+
+non-uniform energy consumption:
+https://www.sciencedirect.com/science/article/abs/pii/S0959652622052775
+dataset (unknown source) - https://www.kaggle.com/datasets/ziya07/ev-energy-consumption-dataset
+
+berlin:
+https://www.sciencedirect.com/science/article/pii/S2352146521001022
+
+przeglądówka:
+https://www.sciencedirect.com/science/article/abs/pii/S0360835221005544
