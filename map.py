@@ -3,9 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
-def carte(n,d, plot = False):
-    pts = points(n,abs(d))
+def carte(n, size, demand=0, plot = False):
+    pts = points(n,abs(size))
     m = distanceMatrix(pts)
+
+    if demand>0:
+        for a in pts:
+            a.append(random.randrange(0,demand))
+    else:
+        for a in pts:
+            a.append(0)
 
     if plot:
         x = [point[0] for point in pts]
@@ -28,8 +35,12 @@ def points(x,d):
 
 def distanceMatrix(p):
     n = len(p)
-    m = np.zeros((n,n))
+    m = (np.zeros((n,n)))
     for a in range (n):
-        for b in range (n):
+        for b in range (a,n):
             m[a,b] = abs(p[a][0]-p[b][0])+abs(p[a][1]-p[b][1])
     return m
+
+
+if __name__=="__main__":
+    print(carte(50,20,plot = True))
