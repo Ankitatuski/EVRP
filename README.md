@@ -1,5 +1,54 @@
-# EVRP
-S8 EVRP Project
+## Determining Current Energy Usage (kWh)
+
+To estimate the energy consumption of electric vehicles, we implemented several **machine learning regression models** using the EV Energy Consumption dataset from Kaggle.
+
+The objective was to predict the **energy usage (kWh)** based on features such as distance travelled, speed, slope, and other driving conditions.
+
+---
+
+### Models Evaluated
+
+The following regression models were tested:
+
+* Linear Regression
+* Gradient Boosting
+* Neural Network
+* Support Vector Machine (SVM)
+* Random Forest
+* Decision Tree
+
+---
+
+### Evaluation Metrics
+
+Model performance was evaluated using the following metrics:
+
+* Mean Squared Error (MSE)
+* Root Mean Squared Error (RMSE)
+* Mean Absolute Error (MAE)
+* Mean Absolute Percentage Error (MAPE)
+* R² Score (coefficient of determination)
+
+Lower values of error metrics indicate better performance, while a higher R² value indicates better model accuracy.
+
+---
+
+### Results and Analysis
+
+The performance comparison of the models is shown in Fig. 1.
+
+* **Linear Regression achieved the best performance**, with the lowest error values and the highest R² score (0.945).
+* More complex models such as Neural Networks and Random Forest did not outperform the linear model.
+* This suggests that the relationship between input features and energy consumption is relatively linear for this dataset.
+
+---
+
+### Conclusion
+
+Based on the results, Linear Regression was selected as the most suitable model for predicting energy consumption. This model can be integrated into the EV routing framework to estimate energy costs for different routes.
+
+---
+
 
 # 📄 SECTION TO ADD TO YOUR REPORT
 
