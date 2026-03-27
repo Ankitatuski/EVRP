@@ -1,3 +1,17 @@
+Quick summary of our work:
+- we tried solving VRP with Clarcke-Wright algorithm and Google OR-tools with intention of incoroporating EVRP elements in near future
+- we researched alternative solutions based on machine learning; we are considering the use of Neural Network and Memetic Algorithm
+- we made a simple random map generator to test algorithms on
+- we made machine learning models predicting the battery use bassed on various conditions
+
+To Do List
+- We plan on choosing one algorithm and focusing on implementing it
+- After that we would like to gradually add more constraints to algorithm and map generator
+
+
+
+
+
 ## Determining Current Energy Usage (kWh)
 
 To estimate the energy consumption of electric vehicles, we implemented several **machine learning regression models** using the EV Energy Consumption dataset from Kaggle.
