@@ -37,8 +37,8 @@ def distanceMatrix(p):
     n = len(p)
     m = (np.zeros((n,n)))
     for a in range (n):
-        for b in range (a,n):
-            m[a,b] = abs(p[a][0]-p[b][0])+abs(p[a][1]-p[b][1])
+        for b in range (n):#(a,n):
+            m[a,b] = (abs(p[a][0]-p[b][0])**2+abs(p[a][1]-p[b][1])**2)**0.5
     return m
 
 
