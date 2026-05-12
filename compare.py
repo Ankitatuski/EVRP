@@ -8,7 +8,7 @@ from ant import mrówkowojażer
 from genetic_tsp import genetic_tsp
 from metropolis_vrp import metropolis_vrp
 from ant_vrp import ant_vrp
-
+from lebaron import lebaron
 
 # Helpers
 def pathlen(path, dist):
@@ -178,6 +178,7 @@ def benchmark(cities = 16):
         "Tabu": lambda: tabu_tsp(dist),
         "Ant Colony": (mrówkowojażer(pts, dist, ants=cities, iter=300), None),
         "Genetic": lambda: genetic_tsp(dist),
+        "LeBaron": lambda: lebaron(dist, vehicles=3)
     }"""
 
     """for name, algo in tsp_algorithms.items():
@@ -195,7 +196,8 @@ def benchmark(cities = 16):
         "Metropolis": lambda: metropolis_vrp(vrp_init, dist),
         "Tabu": lambda: tabu_vrp(vrp_init, dist),
         "Genetic": lambda: genetic_vrp(vrp_init, dist),
-        "Ant Colony": lambda: ant_vrp(dist, vehicles=3)
+        "Ant Colony": lambda: ant_vrp(dist, vehicles=3),
+        "LeBaron": lambda: lebaron(dist, vehicles=3)
     }
 
 
