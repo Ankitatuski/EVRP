@@ -3,7 +3,7 @@ import random
 from copy import deepcopy
 import map
 
-# replicationg https://ieeexplore.ieee.org/abstract/document/9194245
+# replicating https://ieeexplore.ieee.org/abstract/document/9194245
 #fitness
 def fit(path, dist):    #for single vehile
     r=0
@@ -71,8 +71,18 @@ def shake(sol, Dsol, n, k):
         TV[Tcar][pos:pos] = seg
     return TV
 
+def mutate(path):
+    l = len(path)-2
+    if l>1:
+        a = random.randint(1,l-1)
+        b = random.randint(a+1,l)
+        c = deepcopy(path[a])
+        path[a] = path[b]
+        path[b] = c
+    return path
 
-def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=1, Vini=0, Vlim=3,iter = 30):
+
+def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30):
     #__initialising population
     pop = PopGen(PopSize,pts,[i for i in range(Ncars)],dist)
     fitnes = [fits(p,dist) for p in pop]
@@ -136,7 +146,15 @@ def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=
                     pop[i] = deepcopy(T3)
                     fitnes[i] = deepcopy(Tfit)
                     break"""
-        print(min(fitnes))
+        # mutation
+        best = fitnes.index(min(fitnes))
+        for a in range(len(pop)):
+            if a!=best:
+                for b in pop[a]:
+                    if random.randint(0,100) <= 100*Mprob:
+                        b = mutate(b)
+
+        print("best",min(fitnes))
         iterator+=1
     l = fitnes.index(min(fitnes))
     print(fits(pop[l],dist))
