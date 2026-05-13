@@ -37,10 +37,40 @@ def distanceMatrix(p):
     n = len(p)
     m = (np.zeros((n,n)))
     for a in range (n):
-        for b in range (n):#(a,n):
-            m[a,b] = (abs(p[a][0]-p[b][0])**2+abs(p[a][1]-p[b][1])**2)**0.5
+        for b in range (a,n):
+            #m[a,b] = abs(p[a][0]-p[b][0])+abs(p[a][1]-p[b][1])             #manhattan
+            m[a,b] = np.sqrt((p[a][0]-p[b][0])**2+(p[a][1]-p[b][1])**2)     #euclidean
     return m
+
+def draw(path, cords):
+    x = [cords[p][0] for p in path]
+    y = [cords[p][1] for p in path]
+
+    colors = ([
+    'tab:blue',
+    'tab:orange',
+    'tab:green',
+    'tab:red',
+    'tab:purple',
+    'tab:brown',
+    'tab:pink',
+    'tab:gray',
+    'tab:olive',
+    'tab:cyan'
+    ])
+
+    plt.plot(x, y, marker='o', linestyle='-', color=random.choice(colors))
+    plt.plot(x[0],y[0], marker='o', color="red")
+
+def drawVRP(paths,cords):
+    for path in paths:
+        draw(path,cords)
+    plt.show()
 
 
 if __name__=="__main__":
-    print(carte(50,20,plot = True))
+    #print(carte(50,20,plot = True))
+
+    pts,m = (carte(10,20,plot = True))
+    draw([a for a in range(10)],pts)
+    plt.show()
