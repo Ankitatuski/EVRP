@@ -81,8 +81,49 @@ def mutate(path):
         path[b] = c
     return path
 
+def tabu(path0, dist, tabu_size=5, max_iter=2):
 
-def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30):
+    path = path0
+    cost = fit(path, dist)
+
+    bpath = deepcopy(path)
+    bcost = deepcopy(cost)
+
+    TL = []
+
+    for k in range(max_iter):
+
+        neibors = []
+
+        for i in range(1,len(path)-1):
+            for j in range(i+1, len(path)-1):
+                n = path
+                n[i], n[j] = n[j], n[i]
+
+                if n not in TL:
+                    neibors.append([n, fit(n, dist)])
+                    #print("+")
+
+        if not neibors:
+            #print("break: ",k)
+            break
+        path, cost = min(neibors, key=lambda x: x[1])
+        if cost < bcost:
+            bpath = deepcopy(path)
+            bcost = deepcopy(cost)
+        
+        TL.append(deepcopy(path))
+        #print(TL)
+
+        if len(TL) > tabu_size:
+            TL.pop(0)
+
+    return bpath, bcost
+
+
+def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30, tab=True):
+    lastbest = 9999999999999999999
+    lbk = 0
     #__initialising population
     pop = PopGen(PopSize,pts,[i for i in range(Ncars)],dist)
     fitnes = [fits(p,dist) for p in pop]
@@ -95,14 +136,14 @@ def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=
         Dm = Dm[:l] + Dm[l+1:]
         Dmf = Dmf[:l] + Dmf[l+1:]
     Dmv = [Vini for d in Dmf]
-    print (pop,"\n",Dm)
+    #print (pop,"\n",Dm)
 
     #__________________     
     #__ACTUAL PROGRAM__
 
     iterator = 1
     while(iterator<=iter):
-        print("========= ITERATION: ",iterator)
+        #print("========= ITERATION: ",iterator)
         #print(pop)
         #print("\n",Dm)
         for i in range(len(pop)):
@@ -113,7 +154,13 @@ def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=
                 ii = random.randint(0,DmSize-1)
                 D = Dm[ii]
                 T2 = shake(T1, D, random.randint(Smin,Smax), k)
-                T3 = T2 #tbc local
+
+                T3 = deepcopy(T2)
+                if tab:
+                    for path in T3:
+                        path = tabu(path,dist)
+                    if fits(T2,dist)<fits(T3,dist):
+                        T3=T2
 
                 # Dm update
                 Tfit = fits(T3,dist)
@@ -125,9 +172,11 @@ def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=
                         mx = max(fitnes)
                         fcopy = deepcopy(fitnes)
                         j = fcopy.index(min(fcopy))
-                        while( pop[j] in Dm):
+                        thesame = 0
+                        while(pop[j] in Dm and thesame<=PopSize):
                             fcopy[j] = mx
                             j = fcopy.index(min(fcopy))
+                            thesame+=1
                         Dm[ii] = deepcopy(pop[j])
                         Dmf[ii] = fits(Dm[ii],dist)
                         Dmv[ii] = Vini
@@ -154,10 +203,16 @@ def Memetic (PopSize, pts, dist, Ncars, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=
                     if random.randint(0,100) <= 100*Mprob:
                         b = mutate(b)
 
-        print("best",min(fitnes))
+        #print("best",min(fitnes))
         iterator+=1
+
+        if min(fitnes) < lastbest:
+            lastbest = deepcopy(min(fitnes))
+            lbk = iterator
+
     l = fitnes.index(min(fitnes))
-    print(fits(pop[l],dist))
+    #print(fits(pop[l],dist))
+    print("last best:", lbk)
     return pop[l], fitnes[l],
 
 
@@ -169,10 +224,21 @@ if __name__ == "__main__":
     D = [0,7,3,5,1,8,2,0],[0,4,6,0]
     P = [0,4,3,2,1,0],[0,7,8,6,5,0]
 
-    paths, cos = Memetic(10,cities,dist,DmSize=5,Ncars=3,iter=30)
+    posize = 8
+    iter = 500
+
+    paths, cos = Memetic(posize,cities,dist,DmSize=5,Ncars=3,iter=iter)
     print(paths, cos )
     #print(PopGen(2,cities,[0,1,2],dist))
     #print(shake(P,D,1,3))
 
 
     map.drawVRP(paths,pts)
+
+    paths, cos = Memetic(posize,cities,dist,DmSize=5,Ncars=3,iter=iter,tab=False)
+    print(paths, cos )
+    map.drawVRP(paths,pts)
+
+    """a,b = tabu_search([0,1,2,3,4,0],dist)
+    print(a)
+    map.drawVRP([a],pts)"""

@@ -3,10 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
-def carte(n, size, demand=0, plot = False):
+def carte(n, size, demand=0, plot = False, full = True):
     pts = points(n,abs(size))
     m = distanceMatrix(pts)
 
+    if full:
+        for a in range (n):
+            for b in range (a,n):
+                m[b,a] = m[a,b]
+
+                
     if demand>0:
         for a in pts:
             a.append(random.randrange(0,demand))
@@ -69,8 +75,8 @@ def drawVRP(paths,cords):
 
 
 if __name__=="__main__":
-    #print(carte(50,20,plot = True))
+    print(carte(5,10,plot = True))
 
-    pts,m = (carte(10,20,plot = True))
+    """pts,m = (carte(10,20,plot = True))
     draw([a for a in range(10)],pts)
-    plt.show()
+    plt.show()"""
