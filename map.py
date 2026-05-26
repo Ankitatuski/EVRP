@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
-def carte(n, size, demand=0, plot = False, full = True):
-    pts = points(n,abs(size))
+def carte(n, size, demand=0, chargers=0, plot = False, full = True):
+    pts = points(n,abs(size))   #[x,y,demand/-charging_rate]
     m = distanceMatrix(pts)
 
     if full:
@@ -20,11 +20,21 @@ def carte(n, size, demand=0, plot = False, full = True):
         for a in pts:
             a.append(0)
 
+    chargers_list = []
+    indexes = [i for i in range(1,n)]
+    for a in range(chargers):
+        i = random.choice(indexes)
+        pts[i][2] = -1
+        chargers_list.append(i)
+        indexes.remove(i)
+
     if plot:
         x = [point[0] for point in pts]
         y = [point[1] for point in pts]
         plt.scatter(x, y)
         plt.scatter(pts[0][0],pts[0][1], color = 'red')
+        for a in chargers_list:
+            plt.scatter(pts[a][0],pts[a][1], color = 'green')
         ax = plt.gca()
         ax.xaxis.set_major_locator(MultipleLocator(1))
         ax.yaxis.set_major_locator(MultipleLocator(1))
@@ -48,7 +58,7 @@ def distanceMatrix(p):
             m[a,b] = np.sqrt((p[a][0]-p[b][0])**2+(p[a][1]-p[b][1])**2)     #euclidean
     return m
 
-def draw(path, cords):
+def draw(path, cords, chargers=[]):
     x = [cords[p][0] for p in path]
     y = [cords[p][1] for p in path]
 
@@ -67,6 +77,8 @@ def draw(path, cords):
 
     plt.plot(x, y, marker='o', linestyle='-', color=random.choice(colors))
     plt.plot(x[0],y[0], marker='o', color="red")
+    for a in chargers:
+        plt.scatter(cords[a][0],cords[a][1], color = 'green')
 
 def drawVRP(paths,cords):
     for path in paths:
@@ -75,7 +87,7 @@ def drawVRP(paths,cords):
 
 
 if __name__=="__main__":
-    print(carte(5,10,plot = True))
+    print(carte(5,10,chargers=2,plot = True))
 
     """pts,m = (carte(10,20,plot = True))
     draw([a for a in range(10)],pts)
