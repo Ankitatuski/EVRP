@@ -40,6 +40,8 @@ def carte(n, size, demand=0, chargers=0, plot = False, full = True):
         ax.yaxis.set_major_locator(MultipleLocator(1))
         plt.grid(True)
         plt.show()
+    if chargers>0:
+        return pts,m,chargers_list
     return pts,m
     
 
@@ -65,7 +67,7 @@ def draw(path, cords, chargers=[]):
     colors = ([
     'tab:blue',
     'tab:orange',
-    'tab:green',
+    #'tab:green',
     'tab:red',
     'tab:purple',
     'tab:brown',
@@ -75,14 +77,16 @@ def draw(path, cords, chargers=[]):
     'tab:cyan'
     ])
 
-    plt.plot(x, y, marker='o', linestyle='-', color=random.choice(colors))
+    plt.plot(x, y, marker='.', linestyle='-', color=random.choice(colors))
     plt.plot(x[0],y[0], marker='o', color="red")
     for a in chargers:
-        plt.scatter(cords[a][0],cords[a][1], color = 'green')
+        plt.scatter(cords[a][0],cords[a][1], color = 'green', marker='o')
 
-def drawVRP(paths,cords):
+def drawVRP(paths,cords, chargers = []):
     for path in paths:
         draw(path,cords)
+    for a in chargers:
+        plt.scatter(cords[a][0],cords[a][1], color = 'green', marker='o')
     plt.show()
 
 
