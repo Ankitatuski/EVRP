@@ -17,7 +17,7 @@ def fits(paths,dist):   #for solution (multiple vehicle)
         r+=fit(p,dist)
     return r
 
-def feasible(path, dist, chargers, battery, penalty_multiplier = 5, details = False):
+def feasible(path, dist, chargers, battery, penalty_multiplier = 3, details = False):
     left = battery
     score = 0
     f = True
@@ -25,7 +25,7 @@ def feasible(path, dist, chargers, battery, penalty_multiplier = 5, details = Fa
     for i in range(1,len(path)):
         d = dist[path[i-1]][path[i]]
         left-=d
-        #score+=d
+        score+=d
         if left<0:
             f = False
             score += penalty_multiplier*(-1*left+left**2)
@@ -43,13 +43,14 @@ def feasibles(sol, dist, chargers, battery, details = False):
     for path in sol:
         score, f = feasible(path, dist, chargers, battery, details=True)
         rscore+=score
+        #print(f)
         if not f:
             rf = False
     if details:
         return rscore, rf
     return rscore
 
-def PopGen(size,pts,cars,dist):
+def PopGen(size,pts,cars,dist, chargers, battery, feasibility = False):
     pop = []
 
     for j in range(size):
@@ -73,6 +74,30 @@ def PopGen(size,pts,cars,dist):
         for c in cars:
             indiv[c].append(pts[0])
         pop.append(indiv)
+
+        
+    if feasibility:
+        for a, individual in enumerate(pop):
+            for b, path in enumerate(individual):
+                pn,pt = feasible(path,dist,chargers,battery,details=True)
+                i=0
+                while(not pt) and i<100:
+                    path, pn = tabucharge(path,dist,chargers,battery, max_iter=3+i)
+                    pn,pt = feasible(path,dist,chargers,battery,details=True)
+                    i+=1
+                #print(i, path)
+                pop[a][b] = path
+
+        """for ind in pop:
+            for path in i:
+                pn,pt = feasible(path,dist,chargers,battery,details=True)
+                i=0
+                while(not pt) and i<100:
+                    path, pn = tabucharge(path,dist,chargers,battery, max_iter=3+i)
+                    pn,pt = feasible(path,dist,chargers,battery,details=True)
+                    i+=1
+                print(i, path)"""
+
     return pop
 
 def shake(sol, Dsol, n, k): 
@@ -197,18 +222,23 @@ def tabucharge(path0, dist, chargers, battery, tabu_size=5, max_iter=5):
         TLi.append(deepcopy(index))
         #TLi.append(deepcopy(index)+1)
 
-        print("tabu: ",path,cost)
+        #print("tabu: ",path,cost)
 
     #print("tabu final: ",bcost,bpath)
+    #print("tabu found feasible - ",feasible(bpath,dist,chargers,battery,details=True)[1])
     return bpath, bcost
 
 
-def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30, tab=True):
+def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30):
     lastbest = 9999999999999999999
     lbk = 0
     #__initialising population
-    pop = PopGen(PopSize,pts,[i for i in range(Ncars)],dist)
-    fitnes = [fits(p,dist) for p in pop]
+    pop = PopGen(PopSize,pts,[i for i in range(Ncars)],dist, chargers, battery, feasibility = True)
+    #fitnes = [fits(p,dist) for p in pop]
+    fitnes = [feasibles(p,dist,chargers,battery) for p in pop]
+
+    #for a in range(len(pop)):
+        #print(a, feasibles(pop[a],dist,chargers,battery,details=True))
 
     #__Dynamic memo initialisation
     Dm = deepcopy(pop)
@@ -230,55 +260,67 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
         #print("\n",Dm)
         for i in range(len(pop)):
             #print("====== i: ",i)
-            T1 = pop[i]
+            pn, pt = feasibles(pop[i],dist,chargers,battery,details=True)
+            T1 = deepcopy(pop[i])
+            for path in T1:
+                for c in chargers:
+                    path = [x for x in path if x!=c]
             for k in range(1,Kmax+1):
                 #print("=== k: ",k)
                 ii = random.randint(0,DmSize-1)
                 D = Dm[ii]
                 T2 = shake(T1, D, random.randint(Smin,Smax), k)
 
-                T3 = deepcopy(T2)
-                if tab:
-                    #print("T3", T3)
-                    for path in T3:
-                        #print("przed tabu, path:",path)
-                        path = tabucharge(path,dist, chargers,battery)
-                    if feasibles(T2,dist, chargers, battery)<feasibles(T3,dist, chargers, battery):
-                        T3=T2
+                T3 = []
+
+                # Tabu adds the chargers
+                for path in T2:
+                    T3.append(tabucharge(path,dist, chargers,battery)[0])
+
+                #print("T3: ",T3)
+
+                tn, tt = feasibles(T3,dist,chargers,battery,details=True)
 
                 # Dm update
-                Tfit = fits(T3,dist)
+                #Tfit = fits(T3,dist)
+                Tfit = tn
                 #print("Dmv: ",Dmv)
-                if Tfit>=fitnes[i]:    #not sure about =
-                    Dmv[ii]-=1
-                    #print("--worse found")
-                    if Dmv[ii] <= Vini-Vlim:     #new solution enters Dm
-                        mx = max(fitnes)
-                        fcopy = deepcopy(fitnes)
-                        j = fcopy.index(min(fcopy))
-                        thesame = 0
-                        while(pop[j] in Dm and thesame<=PopSize):
-                            fcopy[j] = mx
+                #print("pop, T3",pt,tt)
+                if tt or (not pt):
+                    if Tfit>=fitnes[i]:    #not sure about =
+                        Dmv[ii]-=1
+                        #print("--worse found")
+                        if Dmv[ii] <= Vini-Vlim:     #new solution enters Dm
+                            mx = max(fitnes)
+                            fcopy = deepcopy(fitnes)
                             j = fcopy.index(min(fcopy))
-                            thesame+=1
-                        Dm[ii] = deepcopy(pop[j])
-                        Dmf[ii] = fits(Dm[ii],dist)
-                        Dmv[ii] = Vini
-                        #print("Dm updated")
-                else:
-                    #print("++better found")
-                    if Dmv[ii]< Vini+Vlim:
-                        Dmv[ii]+=1
-                # pop update
-                    pop[i] = deepcopy(T3)
-                    fitnes[i] = deepcopy(Tfit)
-                    break
+                            thesame = 0
+                            while((pop[j] in Dm) and thesame<=PopSize):
+                                fcopy[j] = mx
+                                j = fcopy.index(min(fcopy))
+                                thesame+=1
+                            DT = deepcopy(pop[j])
+                            for path in DT:
+                                for c in chargers:
+                                    path = [x for x in path if x!=c]
+                            Dm[ii] = DT
+                            Dmf[ii] = fits(Dm[ii],dist)
+                            Dmv[ii] = Vini
+                            #print("Dm updated")
+                    else:
+                        print("++better found")
+                        if Dmv[ii]< Vini+Vlim:
+                            Dmv[ii]+=1
+                    # pop update
+                        pop[i] = deepcopy(T3)
+                        fitnes[i] = deepcopy(Tfit)
+                        break
 
-                """# pop update
-                if Tfit<=fitnes[i]:
-                    pop[i] = deepcopy(T3)
-                    fitnes[i] = deepcopy(Tfit)
-                    break"""
+                # pop update
+                #if Tfit<=fitnes[i]:
+                #    pop[i] = deepcopy(T3)
+                #    fitnes[i] = deepcopy(Tfit)
+                #    break
         # mutation
         best = fitnes.index(min(fitnes))
         for a in range(len(pop)):
@@ -287,12 +329,12 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
                     if random.randint(0,100) <= 100*Mprob:
                         b = mutate(b)
 
-        #print("best",min(fitnes))
-        iterator+=1
-
         if min(fitnes) < lastbest:
             lastbest = deepcopy(min(fitnes))
             lbk = iterator
+
+        #print("best",min(fitnes))
+        iterator+=1
 
     l = fitnes.index(min(fitnes))
     #print(fits(pop[l],dist))
@@ -310,23 +352,24 @@ if __name__ == "__main__":
     P = [0,4,3,2,1,0],[0,7,8,6,5,0]
 
     posize = 8
-    iter = 3
+    iter = 150
     batt = 13
 
-    """paths, cos = Memetic(posize,cities,dist,3,chargers,batt,DmSize=5,iter=iter,Mprob=0.8)
-    print(paths, cos )
+    paths, cos = Memetic(posize,cities,dist,3,chargers,batt,DmSize=5,iter=iter,Mprob=0.8)
+    print(chargers)
+    print(paths, cos ,)
     #print(PopGen(2,cities,[0,1,2],dist))
     #print(shake(P,D,1,3))
 
     print(feasibles(paths,dist,chargers,batt,details=True))
 
-    map.drawVRP(paths,pts,chargers)"""
+    map.drawVRP(paths,pts,chargers)
 
     """paths, cos = Memetic(posize,cities,dist,DmSize=5,Ncars=3,iter=iter,tab=False)
     print(paths, cos )
     map.drawVRP(paths,pts)"""
 
-    P=[]
+    """P=[]
     for p in D:
         for c in chargers:
             p = [x for x in p if x!=c]
@@ -337,4 +380,17 @@ if __name__ == "__main__":
     print(chargers)
     print(P)
     print(feasibles(P,dist,chargers,batt,details=True))
-    map.drawVRP(P,pts,chargers)
+    map.drawVRP(P,pts,chargers)"""
+
+
+    """PopSize = 8
+    Ncars = 3
+
+    pop = PopGen(PopSize,[0, 1, 2, 3, 4, 5, 6, 7, 8],[i for i in range(Ncars)],dist, chargers, batt, feasibility = True)
+    for i in pop:
+        print("===",i)
+        print(feasibles(i,dist,chargers,batt,details=True))
+    map.drawVRP(random.choice(pop),pts,chargers)"""
+
+
+
