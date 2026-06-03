@@ -50,7 +50,7 @@ def feasibles(sol, dist, chargers, battery, details = False):
         return rscore, rf
     return rscore
 
-def PopGen(size,pts,cars,dist, chargers, battery, feasibility = False):
+def PopGen(size,pts,cars,dist, chargers, battery, feasibility = True):
     pop = []
 
     for j in range(size):
@@ -67,7 +67,8 @@ def PopGen(size,pts,cars,dist, chargers, battery, feasibility = False):
                 a = random.randint(1,len(pts)-2)
                 b = random.randint(a,len(pts)-1)
                 arr[a:b+1] = arr[a:b+1][::-1]
-                if fit(arr,dist)<=fit(c,dist):
+                #if fit(arr,dist)<=fit(c,dist):
+                if feasible(arr,dist,chargers,battery)<=feasible(c,dist,chargers,battery):
                     c = arr
             #print("fin",c)
             
@@ -89,14 +90,14 @@ def PopGen(size,pts,cars,dist, chargers, battery, feasibility = False):
                 pop[a][b] = path
 
         """for ind in pop:
-            for path in i:
+            for path in ind:
                 pn,pt = feasible(path,dist,chargers,battery,details=True)
                 i=0
                 while(not pt) and i<100:
                     path, pn = tabucharge(path,dist,chargers,battery, max_iter=3+i)
                     pn,pt = feasible(path,dist,chargers,battery,details=True)
                     i+=1
-                print(i, path)"""
+                #print(i, path)"""
 
     return pop
 
@@ -128,6 +129,13 @@ def shake(sol, Dsol, n, k):
         TV[Tcar][pos:pos] = seg
     return TV
 
+def decharge(sol,chargers):
+    for i in range(len(sol)):
+        for c in chargers:
+            sol[i] = ([x for x in sol[i] if x!=c])
+
+    return sol
+
 def mutate(path):
     l = len(path)-2
     if l>1:
@@ -143,7 +151,7 @@ def mutatecharge(path,chargers):
     path.insert(i,random.choice(chargers))
     return path
 
-def tabu(path0, dist, tabu_size=5, max_iter=3):
+def tabu(path0, dist, tabu_size=5, max_iter=3, chargers=[], battery=0):
 
     path = path0
     cost = fit(path, dist)
@@ -158,20 +166,24 @@ def tabu(path0, dist, tabu_size=5, max_iter=3):
         neibors = []
 
         for i in range(1,len(path)-1):
-            for j in range(i+1, len(path)-1):
-                n = path
-                n[i], n[j] = n[j], n[i]
+            #if path[i] not in chargers:
+                for j in range(i+1, len(path)-1):
+                    #if path[j] not in chargers:
+                        n = path
+                        n[i], n[j] = n[j], n[i]
 
-                if n not in TL:
-                    neibors.append([n, fit(n, dist)])
-                    #print("+")
+                        if n not in TL and feasible(n,dist,chargers,battery,details=True)[1]:
+                            #print("n:", feasible(n,dist,chargers,battery,details=True))
+                            neibors.append([n, fit(n, dist)])
+                            #print("+")
 
         if not neibors:
-            print("break: ",k)
+            #print("break: ",k)
+            return bpath, bcost
             break
         path, cost = min(neibors, key=lambda x: x[1])
         if cost < bcost:
-            print("tabu found")
+            #print("\t\ttabu found", feasible(path,dist,chargers,battery,details=True))
             bpath = deepcopy(path)
             bcost = deepcopy(cost)
         
@@ -234,11 +246,17 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
     lbk = 0
     #__initialising population
     pop = PopGen(PopSize,pts,[i for i in range(Ncars)],dist, chargers, battery, feasibility = True)
-    #fitnes = [fits(p,dist) for p in pop]
-    fitnes = [feasibles(p,dist,chargers,battery) for p in pop]
+    fitnes = [fits(p,dist) for p in pop]
+    #fitnes = [feasibles(p,dist,chargers,battery) for p in pop]
 
-    #for a in range(len(pop)):
+    unfit_count = PopSize
+    for a in range(len(pop)):
+        t = feasibles(pop[a],dist,chargers,battery,details=True)[1]
+        if t:
+            unfit_count-=1
         #print(a, feasibles(pop[a],dist,chargers,battery,details=True))
+    if unfit_count > 0:
+        print("Unfit individuals in initial population (%s) ! !"%unfit_count)
 
     #__Dynamic memo initialisation
     Dm = deepcopy(pop)
@@ -255,16 +273,14 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
 
     iterator = 1
     while(iterator<=iter):
-        print("========= ITERATION: ",iterator)
+        #print("========= ITERATION: ",iterator)
         #print(pop)
         #print("\n",Dm)
         for i in range(len(pop)):
             #print("====== i: ",i)
             pn, pt = feasibles(pop[i],dist,chargers,battery,details=True)
             T1 = deepcopy(pop[i])
-            for path in T1:
-                for c in chargers:
-                    path = [x for x in path if x!=c]
+            T1 = decharge(T1,chargers)
             for k in range(1,Kmax+1):
                 #print("=== k: ",k)
                 ii = random.randint(0,DmSize-1)
@@ -276,17 +292,28 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
                 # Tabu adds the chargers
                 for path in T2:
                     T3.append(tabucharge(path,dist, chargers,battery)[0])
-
+                Tfit = fits(T3,dist)
                 #print("T3: ",T3)
+
+                T4 = []
+                for path in T3: 
+                    T4.append(tabu(path,dist,chargers=chargers,battery=battery)[0])
+                T4fit = fits(T4,dist)
+                #print("T4 feasible?",feasibles(T4,dist,chargers,battery,details=True))
+                
+                if T4fit< Tfit:
+                    #print("xxxxx T4 better", feasibles(T4,dist,chargers,battery,details=True)[1])
+                    T3 = deepcopy(T4)
+                    Tfit = deepcopy(T4fit)
 
                 tn, tt = feasibles(T3,dist,chargers,battery,details=True)
 
                 # Dm update
                 #Tfit = fits(T3,dist)
-                Tfit = tn
+                #Tfit = tn
                 #print("Dmv: ",Dmv)
                 #print("pop, T3",pt,tt)
-                if tt or (not pt):
+                if tt and pt: #or (not pt):
                     if Tfit>=fitnes[i]:    #not sure about =
                         Dmv[ii]-=1
                         #print("--worse found")
@@ -300,20 +327,22 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
                                 j = fcopy.index(min(fcopy))
                                 thesame+=1
                             DT = deepcopy(pop[j])
-                            for path in DT:
-                                for c in chargers:
-                                    path = [x for x in path if x!=c]
+                            DT = decharge(DT,chargers)
                             Dm[ii] = DT
                             Dmf[ii] = fits(Dm[ii],dist)
                             Dmv[ii] = Vini
                             #print("Dm updated")
                     else:
-                        print("++better found")
+                        #print("++better found")
                         if Dmv[ii]< Vini+Vlim:
                             Dmv[ii]+=1
                     # pop update
+                        #print("pop, T3",pt,tt)
+                        #print("new:",T3)
                         pop[i] = deepcopy(T3)
                         fitnes[i] = deepcopy(Tfit)
+                        #print("\t",feasibles(pop[i],dist,chargers,battery,details=True)[1])
+                        #print(pop)
                         break
 
                 # pop update
@@ -322,19 +351,25 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
                 #    fitnes[i] = deepcopy(Tfit)
                 #    break
         # mutation
-        best = fitnes.index(min(fitnes))
+        """best = fitnes.index(min(fitnes))
         for a in range(len(pop)):
             if a!=best:
                 for b in pop[a]:
                     if random.randint(0,100) <= 100*Mprob:
-                        b = mutate(b)
+                        b = mutate(b)"""
 
         if min(fitnes) < lastbest:
             lastbest = deepcopy(min(fitnes))
             lbk = iterator
 
+        """for ind in pop:
+            print(feasibles(ind,dist,chargers,battery,details=True),fits(ind,dist))"""
+
         #print("best",min(fitnes))
         iterator+=1
+    
+    """for ind in pop:
+        print(feasibles(ind,dist,chargers,battery,details=True),fits(ind,dist))"""
 
     l = fitnes.index(min(fitnes))
     #print(fits(pop[l],dist))
@@ -345,17 +380,17 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
 
 if __name__ == "__main__":
     N = 9
-    C = 3
+    C = 2
     pts,dist,chargers = map.carte(N,5,chargers=C)
     cities = [a for a in range(N)]
     D = [0,7,3,5,1,8,2,0],[0,4,6,0]
     P = [0,4,3,2,1,0],[0,7,8,6,5,0]
 
     posize = 8
-    iter = 150
-    batt = 13
+    iter = 100
+    batt = 14
 
-    paths, cos = Memetic(posize,cities,dist,3,chargers,batt,DmSize=5,iter=iter,Mprob=0.8)
+    paths, cos = Memetic(posize,cities,dist,3,chargers,batt,DmSize=3,iter=iter,Mprob=0.8)
     print(chargers)
     print(paths, cos ,)
     #print(PopGen(2,cities,[0,1,2],dist))
@@ -392,5 +427,6 @@ if __name__ == "__main__":
         print(feasibles(i,dist,chargers,batt,details=True))
     map.drawVRP(random.choice(pop),pts,chargers)"""
 
-
+    #print([[0, 7, 0], [0, 0], [0, 3, 1, 4, 6, 8, 5, 2, 0]])
+    #print(decharge([[0, 7, 0], [0, 0], [0, 3, 1, 4, 6, 8, 5, 2, 0]],[2, 1, 5, 4, 8]))
 
