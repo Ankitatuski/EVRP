@@ -3,19 +3,42 @@ import random
 from copy import deepcopy
 import map
 
-# replicating https://ieeexplore.ieee.org/abstract/document/9194245
+# based on https://ieeexplore.ieee.org/abstract/document/9194245
 #fitness
-def fit(path, dist):    #for single vehile
-    r=0
+time_importance = 1
+def fit(path, dist, time,chargers,batt, sole=False,details=False):    #for single vehile
+    d=0
+    t=0
+    left = batt
+    feas = True
     for a in range(len(path)-1):
-        r+=dist[path[a],path[a+1]]
-    return r
+        temp=dist[path[a],path[a+1]]
+        t+=time[path[a],path[a+1]]
+        d+=temp
+        left-=temp
+        if left<0:
+            feas = False
+        if path[a] in chargers:
+            t+= (batt-left)#*1
+            left = batt
+    if not feas:
+        d*=3
+    if sole:
+        if details:
+            return d+(t*time_importance),feas
+        return d+(t*time_importance)
+    return d,t
 
-def fits(paths,dist):   #for solution (multiple vehicle)
-    r = 0
+def fits(paths,dist, time,chargers,batt, details = False):   #for solution (multiple vehicle)
+    d = 0
+    t = []
     for p in paths:
-        r+=fit(p,dist)
-    return r
+        td,tt=fit(p,dist, time,chargers,batt)
+        d+=td
+        t.append(tt)
+    if details:
+        print(t)
+    return d+(max(t)*time_importance)
 
 def feasible(path, dist, chargers, battery, penalty_multiplier = 3, details = False):
     left = battery
@@ -151,10 +174,10 @@ def mutatecharge(path,chargers):
     path.insert(i,random.choice(chargers))
     return path
 
-def tabu(path0, dist, tabu_size=5, max_iter=3, chargers=[], battery=0):
+def tabu(path0, dist, time,chargers,batt, tabu_size=5, max_iter=3):
 
     path = path0
-    cost = fit(path, dist)
+    cost = fit(path, dist, time,chargers,batt,sole=True)
 
     bpath = deepcopy(path)
     bcost = deepcopy(cost)
@@ -171,10 +194,11 @@ def tabu(path0, dist, tabu_size=5, max_iter=3, chargers=[], battery=0):
                     #if path[j] not in chargers:
                         n = path
                         n[i], n[j] = n[j], n[i]
+                        r,f = fit(path, dist, time,chargers,batt,sole=True,details=True)
 
-                        if n not in TL and feasible(n,dist,chargers,battery,details=True)[1]:
+                        if n not in TL and f:
                             #print("n:", feasible(n,dist,chargers,battery,details=True))
-                            neibors.append([n, fit(n, dist)])
+                            neibors.append([n, r])
                             #print("+")
 
         if not neibors:
@@ -241,12 +265,13 @@ def tabucharge(path0, dist, chargers, battery, tabu_size=5, max_iter=5):
     return bpath, bcost
 
 
-def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30):
+def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30):
     lastbest = 9999999999999999999
     lbk = 0
+    chargers_count = len(chargers)
     #__initialising population
     pop = PopGen(PopSize,pts,[i for i in range(Ncars)],dist, chargers, battery, feasibility = True)
-    fitnes = [fits(p,dist) for p in pop]
+    fitnes = [fits(p,dist, time,chargers,batt) for p in pop]
     #fitnes = [feasibles(p,dist,chargers,battery) for p in pop]
 
     unfit_count = PopSize
@@ -273,7 +298,7 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
 
     iterator = 1
     while(iterator<=iter):
-        #print("========= ITERATION: ",iterator)
+        print("========= ITERATION: ",iterator)
         #print(pop)
         #print("\n",Dm)
         for i in range(len(pop)):
@@ -292,13 +317,13 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
                 # Tabu adds the chargers
                 for path in T2:
                     T3.append(tabucharge(path,dist, chargers,battery)[0])
-                Tfit = fits(T3,dist)
+                Tfit = fits(T3,dist,time,chargers,battery)
                 #print("T3: ",T3)
 
                 T4 = []
                 for path in T3: 
-                    T4.append(tabu(path,dist,chargers=chargers,battery=battery)[0])
-                T4fit = fits(T4,dist)
+                    T4.append(tabu(path,dist,time,chargers=chargers,batt=battery, max_iter=chargers_count)[0])
+                T4fit = fits(T4,dist,time,chargers,battery)
                 #print("T4 feasible?",feasibles(T4,dist,chargers,battery,details=True))
                 
                 if T4fit< Tfit:
@@ -329,11 +354,11 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
                             DT = deepcopy(pop[j])
                             DT = decharge(DT,chargers)
                             Dm[ii] = DT
-                            Dmf[ii] = fits(Dm[ii],dist)
+                            Dmf[ii] = fits(Dm[ii],dist,time,chargers,battery)
                             Dmv[ii] = Vini
                             #print("Dm updated")
                     else:
-                        #print("++better found")
+                        print("++better found")
                         if Dmv[ii]< Vini+Vlim:
                             Dmv[ii]+=1
                     # pop update
@@ -368,11 +393,13 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
         #print("best",min(fitnes))
         iterator+=1
     
-    """for ind in pop:
-        print(feasibles(ind,dist,chargers,battery,details=True),fits(ind,dist))"""
+    if unfit_count>0:
+        for ind in pop:
+            print(feasibles(ind,dist,chargers,battery,details=True),fits(ind,dist,time,chargers,battery))
+        print("Unfit individuals in initial population (%s) ! !"%unfit_count)
 
     l = fitnes.index(min(fitnes))
-    #print(fits(pop[l],dist))
+    #print(fits(pop[l],dist,time,chargers,battery,True))
     print("last best:", lbk)
     return pop[l], fitnes[l],
 
@@ -381,7 +408,7 @@ def Memetic (PopSize, pts, dist, Ncars, chargers, battery, DmSize=2, Kmax=3, Smi
 if __name__ == "__main__":
     N = 9
     C = 2
-    pts,dist,chargers = map.carte(N,5,chargers=C)
+    pts,dist,time,chargers = map.carte(N,5,chargers=C,time=True)
     cities = [a for a in range(N)]
     D = [0,7,3,5,1,8,2,0],[0,4,6,0]
     P = [0,4,3,2,1,0],[0,7,8,6,5,0]
@@ -390,9 +417,9 @@ if __name__ == "__main__":
     iter = 100
     batt = 14
 
-    paths, cos = Memetic(posize,cities,dist,3,chargers,batt,DmSize=3,iter=iter,Mprob=0.8)
+    paths, cost = Memetic(posize,cities,dist, time,3,chargers,batt,DmSize=3,iter=iter,Mprob=0.8)
     print(chargers)
-    print(paths, cos ,)
+    print(paths, cost ,)
     #print(PopGen(2,cities,[0,1,2],dist))
     #print(shake(P,D,1,3))
 

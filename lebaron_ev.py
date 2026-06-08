@@ -2,11 +2,12 @@ import numpy as np
 import random
 from copy import deepcopy
 
-from memetic_karny import feasible, feasibles, tabucharge
+from memetic_karny import feasible, feasibles, tabucharge, fits, fit
 
 
 def lebaron_vrp(
     dist,
+    time,
     chargers,
     battery,
     vehicles=3,
@@ -142,13 +143,19 @@ def lebaron_vrp(
             # EVRP FITNESS
             # ==================================
 
-            cost, solution_feasible = feasibles(
+            """cost, solution_feasible = feasibles(
                 routes,
                 dist,
                 chargers,
                 battery,
                 details=True
-            )
+            )"""
+            cost = fits(
+                routes, 
+                dist, 
+                time,
+                chargers,
+                battery)
 
             # ==================================
             # DUAL MEMORY
@@ -234,14 +241,16 @@ if __name__ == "__main__":
     N = 12
     batt = 15
 
-    pts, dist, chargers = map.carte(
+    pts, dist, time, chargers = map.carte(
         N,
         5,
-        chargers=int(N / 5)
+        chargers=int(N / 5),
+        time=True
     )
 
     routes, cost = lebaron_vrp(
         dist,
+        time,
         chargers,
         batt,
         vehicles=3,
