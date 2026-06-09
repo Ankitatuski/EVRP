@@ -5,8 +5,7 @@ import map
 
 # based on https://ieeexplore.ieee.org/abstract/document/9194245
 #fitness
-time_importance = 1
-def fit(path, dist, time,chargers,batt, sole=False,details=False):    #for single vehile
+def fit(path, dist, time,chargers,batt, sole=False,details=False, time_importance = 1):    #for single vehile
     d=0
     t=0
     left = batt
@@ -29,11 +28,11 @@ def fit(path, dist, time,chargers,batt, sole=False,details=False):    #for singl
         return d+(t*time_importance)
     return d,t
 
-def fits(paths,dist, time,chargers,batt, details = False):   #for solution (multiple vehicle)
+def fits(paths,dist, time,chargers,batt, details = False, time_importance = 1):   #for solution (multiple vehicle)
     d = 0
     t = []
     for p in paths:
-        td,tt=fit(p,dist, time,chargers,batt)
+        td,tt=fit(p,dist, time,chargers,batt, time_importance = 1)
         d+=td
         t.append(tt)
     if details:
@@ -174,10 +173,10 @@ def mutatecharge(path,chargers):
     path.insert(i,random.choice(chargers))
     return path
 
-def tabu(path0, dist, time,chargers,batt, tabu_size=5, max_iter=3):
+def tabu(path0, dist, time,chargers,batt, tabu_size=5, max_iter=3, time_importance=1):
 
     path = path0
-    cost = fit(path, dist, time,chargers,batt,sole=True)
+    cost = fit(path, dist, time,chargers,batt,sole=True, time_importance= time_importance)
 
     bpath = deepcopy(path)
     bcost = deepcopy(cost)
@@ -194,7 +193,7 @@ def tabu(path0, dist, time,chargers,batt, tabu_size=5, max_iter=3):
                     #if path[j] not in chargers:
                         n = path
                         n[i], n[j] = n[j], n[i]
-                        r,f = fit(path, dist, time,chargers,batt,sole=True,details=True)
+                        r,f = fit(path, dist, time,chargers,batt,sole=True,details=True, time_importance = time_importance)
 
                         if n not in TL and f:
                             #print("n:", feasible(n,dist,chargers,battery,details=True))
@@ -265,13 +264,13 @@ def tabucharge(path0, dist, chargers, battery, tabu_size=5, max_iter=5):
     return bpath, bcost
 
 
-def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30):
+def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30, time_importance = 1):
     lastbest = 9999999999999999999
     lbk = 0
     chargers_count = len(chargers)
     #__initialising population
     pop = PopGen(PopSize,pts,[i for i in range(Ncars)],dist, chargers, battery, feasibility = True)
-    fitnes = [fits(p,dist, time,chargers,batt) for p in pop]
+    fitnes = [fits(p,dist, time,chargers,batt, time_importance=time_importance) for p in pop]
     #fitnes = [feasibles(p,dist,chargers,battery) for p in pop]
 
     unfit_count = PopSize
@@ -317,13 +316,13 @@ def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=
                 # Tabu adds the chargers
                 for path in T2:
                     T3.append(tabucharge(path,dist, chargers,battery)[0])
-                Tfit = fits(T3,dist,time,chargers,battery)
+                Tfit = fits(T3,dist,time,chargers,battery, time_importance= time_importance)
                 #print("T3: ",T3)
 
                 T4 = []
                 for path in T3: 
-                    T4.append(tabu(path,dist,time,chargers=chargers,batt=battery, max_iter=chargers_count)[0])
-                T4fit = fits(T4,dist,time,chargers,battery)
+                    T4.append(tabu(path,dist,time,chargers=chargers,batt=battery, max_iter=chargers_count, time_importance = time_importance)[0])
+                T4fit = fits(T4,dist,time,chargers,battery, time_importance= time_importance)
                 #print("T4 feasible?",feasibles(T4,dist,chargers,battery,details=True))
                 
                 if T4fit< Tfit:
@@ -354,7 +353,7 @@ def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=
                             DT = deepcopy(pop[j])
                             DT = decharge(DT,chargers)
                             Dm[ii] = DT
-                            Dmf[ii] = fits(Dm[ii],dist,time,chargers,battery)
+                            Dmf[ii] = fits(Dm[ii],dist,time,chargers,battery, time_importance= time_importance)
                             Dmv[ii] = Vini
                             #print("Dm updated")
                     else:
@@ -395,7 +394,7 @@ def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=
     
     if unfit_count>0:
         for ind in pop:
-            print(feasibles(ind,dist,chargers,battery,details=True),fits(ind,dist,time,chargers,battery))
+            print(feasibles(ind,dist,chargers,battery,details=True),fits(ind,dist,time,chargers,battery, time_importance= time_importance))
         print("Unfit individuals in initial population (%s) ! !"%unfit_count)
 
     l = fitnes.index(min(fitnes))
@@ -408,14 +407,15 @@ def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=
 if __name__ == "__main__":
     N = 9
     C = 2
-    pts,dist,time,chargers = map.carte(N,5,chargers=C,time=True)
+    #pts,dist,time,chargers = map.carte(N,5,chargers=C,time=True)
+    pts,dist,time,chargers = map.generate_map(N,C,type="real")
     cities = [a for a in range(N)]
     D = [0,7,3,5,1,8,2,0],[0,4,6,0]
     P = [0,4,3,2,1,0],[0,7,8,6,5,0]
 
     posize = 8
     iter = 100
-    batt = 14
+    batt = 5
 
     paths, cost = Memetic(posize,cities,dist, time,3,chargers,batt,DmSize=3,iter=iter,Mprob=0.8)
     print(chargers)

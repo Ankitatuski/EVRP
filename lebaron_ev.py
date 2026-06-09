@@ -2,7 +2,7 @@ import numpy as np
 import random
 from copy import deepcopy
 
-from memetic_karny import feasible, feasibles, tabucharge, fits, fit
+from memetic_karny import feasible, feasibles, tabucharge, fits
 
 
 def lebaron_vrp(
@@ -15,7 +15,8 @@ def lebaron_vrp(
     iterations=300,
     learning_rate=0.1,
     exploration=0.2,
-    decay=0.99
+    decay=0.99,
+    time_importance = 1
 ):
 
     cities = len(dist)
@@ -155,7 +156,8 @@ def lebaron_vrp(
                 dist, 
                 time,
                 chargers,
-                battery)
+                battery,
+                time_importance=time_importance)
 
             # ==================================
             # DUAL MEMORY
@@ -241,12 +243,13 @@ if __name__ == "__main__":
     N = 12
     batt = 15
 
-    pts, dist, time, chargers = map.carte(
+    """pts, dist, time, chargers = map.carte(
         N,
         5,
         chargers=int(N / 5),
         time=True
-    )
+    )"""
+    pts, dist, time, chargers = map.generate_map(N,int(N / 5))
 
     routes, cost = lebaron_vrp(
         dist,
