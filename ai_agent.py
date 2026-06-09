@@ -1,29 +1,24 @@
 class EVRoutingAgent:
 
-    def __init__(self):
-
-        pass
-
-    def normalize(
+    def __init__(
         self,
-        value,
-        max_value
+        distance_weight=0.4,
+        time_weight=0.3,
+        energy_weight=0.3
     ):
+
+        self.distance_weight = distance_weight
+        self.time_weight = time_weight
+        self.energy_weight = energy_weight
+
+    def normalize(self, value, max_value):
 
         if max_value == 0:
             return 0
 
         return value / max_value
 
-    def choose(
-
-        self,
-
-        memetic,
-
-        lebaron
-
-    ):
+    def choose(self, memetic, lebaron):
 
         max_distance = max(
             memetic["distance"],
@@ -42,6 +37,7 @@ class EVRoutingAgent:
 
         memetic_score = (
 
+            self.distance_weight *
             self.normalize(
                 memetic["distance"],
                 max_distance
@@ -49,6 +45,7 @@ class EVRoutingAgent:
 
             +
 
+            self.time_weight *
             self.normalize(
                 memetic["time"],
                 max_time
@@ -56,6 +53,7 @@ class EVRoutingAgent:
 
             +
 
+            self.energy_weight *
             self.normalize(
                 memetic["energy"],
                 max_energy
@@ -65,6 +63,7 @@ class EVRoutingAgent:
 
         lebaron_score = (
 
+            self.distance_weight *
             self.normalize(
                 lebaron["distance"],
                 max_distance
@@ -72,6 +71,7 @@ class EVRoutingAgent:
 
             +
 
+            self.time_weight *
             self.normalize(
                 lebaron["time"],
                 max_time
@@ -79,6 +79,7 @@ class EVRoutingAgent:
 
             +
 
+            self.energy_weight *
             self.normalize(
                 lebaron["energy"],
                 max_energy
@@ -89,17 +90,11 @@ class EVRoutingAgent:
         if memetic_score < lebaron_score:
 
             return {
-
                 "algorithm": "Memetic",
-
                 "score": memetic_score
-
             }
 
         return {
-
             "algorithm": "LeBaron",
-
             "score": lebaron_score
-
         }
