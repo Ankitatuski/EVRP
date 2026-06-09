@@ -264,13 +264,13 @@ def tabucharge(path0, dist, chargers, battery, tabu_size=5, max_iter=5):
     return bpath, bcost
 
 
-def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30, time_importance = 1):
+def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=3, Smin=1, Smax=2, Mprob=0.5, Vini=0, Vlim=3,iter = 30, time_importance = 1, display = False):
     lastbest = 9999999999999999999
     lbk = 0
     chargers_count = len(chargers)
     #__initialising population
     pop = PopGen(PopSize,pts,[i for i in range(Ncars)],dist, chargers, battery, feasibility = True)
-    fitnes = [fits(p,dist, time,chargers,batt, time_importance=time_importance) for p in pop]
+    fitnes = [fits(p,dist, time,chargers,battery, time_importance=time_importance) for p in pop]
     #fitnes = [feasibles(p,dist,chargers,battery) for p in pop]
 
     unfit_count = PopSize
@@ -297,7 +297,8 @@ def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=
 
     iterator = 1
     while(iterator<=iter):
-        print("========= ITERATION: ",iterator)
+        if display:
+            print("========= ITERATION: ",iterator)
         #print(pop)
         #print("\n",Dm)
         for i in range(len(pop)):
@@ -357,7 +358,8 @@ def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=
                             Dmv[ii] = Vini
                             #print("Dm updated")
                     else:
-                        print("++better found")
+                        if display:
+                            print("++better found")
                         if Dmv[ii]< Vini+Vlim:
                             Dmv[ii]+=1
                     # pop update
@@ -392,14 +394,16 @@ def Memetic (PopSize, pts, dist, time, Ncars, chargers, battery, DmSize=2, Kmax=
         #print("best",min(fitnes))
         iterator+=1
     
-    if unfit_count>0:
-        for ind in pop:
-            print(feasibles(ind,dist,chargers,battery,details=True),fits(ind,dist,time,chargers,battery, time_importance= time_importance))
-        print("Unfit individuals in initial population (%s) ! !"%unfit_count)
+    if display:
+        if unfit_count>0:
+            for ind in pop:
+                print(feasibles(ind,dist,chargers,battery,details=True),fits(ind,dist,time,chargers,battery, time_importance= time_importance))
+            print("Unfit individuals in initial population (%s) ! !"%unfit_count)
 
     l = fitnes.index(min(fitnes))
     #print(fits(pop[l],dist,time,chargers,battery,True))
-    print("last best:", lbk)
+    if display:
+        print("last best:", lbk)
     return pop[l], fitnes[l],
 
 

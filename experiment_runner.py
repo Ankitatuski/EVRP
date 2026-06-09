@@ -81,7 +81,7 @@ with open(
         pts, dist, time, chargers = map.generate_map(
             NODES,
             int(NODES / 5),
-            type="real"
+            type="random"
         )
 
         cities = [i for i in range(NODES)]
