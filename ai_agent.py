@@ -1,57 +1,105 @@
-import numpy as np
-
 class EVRoutingAgent:
 
-    def __init__(
+    def __init__(self):
+
+        pass
+
+    def normalize(
         self,
-        distance_weight=0.4,
-        time_weight=0.3,
-        energy_weight=0.3
+        value,
+        max_value
     ):
 
-        self.distance_weight = distance_weight
-        self.time_weight = time_weight
-        self.energy_weight = energy_weight
+        if max_value == 0:
+            return 0
 
-    def evaluate(
-        self,
-        distance,
-        travel_time,
-        energy
-    ):
-
-        return (
-            self.distance_weight * distance
-            + self.time_weight * travel_time
-            + self.energy_weight * energy
-        )
+        return value / max_value
 
     def choose(
+
         self,
-        memetic_result,
-        lebaron_result
+
+        memetic,
+
+        lebaron
+
     ):
 
-        memetic_score = self.evaluate(
-            memetic_result["distance"],
-            memetic_result["time"],
-            memetic_result["energy"]
+        max_distance = max(
+            memetic["distance"],
+            lebaron["distance"]
         )
 
-        lebaron_score = self.evaluate(
-            lebaron_result["distance"],
-            lebaron_result["time"],
-            lebaron_result["energy"]
+        max_time = max(
+            memetic["time"],
+            lebaron["time"]
+        )
+
+        max_energy = max(
+            memetic["energy"],
+            lebaron["energy"]
+        )
+
+        memetic_score = (
+
+            self.normalize(
+                memetic["distance"],
+                max_distance
+            )
+
+            +
+
+            self.normalize(
+                memetic["time"],
+                max_time
+            )
+
+            +
+
+            self.normalize(
+                memetic["energy"],
+                max_energy
+            )
+
+        )
+
+        lebaron_score = (
+
+            self.normalize(
+                lebaron["distance"],
+                max_distance
+            )
+
+            +
+
+            self.normalize(
+                lebaron["time"],
+                max_time
+            )
+
+            +
+
+            self.normalize(
+                lebaron["energy"],
+                max_energy
+            )
+
         )
 
         if memetic_score < lebaron_score:
 
             return {
+
                 "algorithm": "Memetic",
+
                 "score": memetic_score
+
             }
 
         return {
+
             "algorithm": "LeBaron",
+
             "score": lebaron_score
+
         }
