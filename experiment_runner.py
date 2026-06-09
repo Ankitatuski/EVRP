@@ -6,6 +6,40 @@ from lebaron_ev import lebaron_vrp
 from ai_agent import EVRoutingAgent
 
 
+def total_distance(routes, dist):
+
+    total = 0
+
+    for route in routes:
+
+        for i in range(len(route) - 1):
+
+            total += dist[
+                route[i]
+            ][
+                route[i + 1]
+            ]
+
+    return total
+
+
+def total_time(routes, time_matrix):
+
+    total = 0
+
+    for route in routes:
+
+        for i in range(len(route) - 1):
+
+            total += time_matrix[
+                route[i]
+            ][
+                route[i + 1]
+            ]
+
+    return total
+
+
 EXPERIMENTS = 30
 
 NODES = 15
@@ -14,31 +48,44 @@ VEHICLES = 3
 
 agent = EVRoutingAgent()
 
-
-with open("results.csv", "w", newline="") as f:
+with open(
+    "results.csv",
+    "w",
+    newline=""
+) as f:
 
     writer = csv.writer(f)
 
     writer.writerow([
+
         "Experiment",
-        "MemeticCost",
-        "LeBaronCost",
+
+        "MemeticDistance",
+        "MemeticTime",
+        "MemeticEnergy",
+
+        "LeBaronDistance",
+        "LeBaronTime",
+        "LeBaronEnergy",
+
         "Winner"
+
     ])
 
     for exp in range(EXPERIMENTS):
 
-        print(f"\nRunning experiment {exp+1}")
+        print(
+            f"\nRunning Experiment {exp+1}"
+        )
 
         pts, dist, time, chargers = map.generate_map(
             NODES,
-            int(NODES/5),
+            int(NODES / 5),
             type="real"
         )
 
         cities = [i for i in range(NODES)]
 
-        # Memetic
         mem_routes, mem_cost = Memetic(
             8,
             cities,
@@ -50,7 +97,6 @@ with open("results.csv", "w", newline="") as f:
             iter=50
         )
 
-        # LeBaron
         leb_routes, leb_cost = lebaron_vrp(
             dist,
             time,
@@ -60,24 +106,62 @@ with open("results.csv", "w", newline="") as f:
             iterations=100
         )
 
+        mem_distance = total_distance(
+            mem_routes,
+            dist
+        )
+
+        mem_time = total_time(
+            mem_routes,
+            time
+        )
+
+        mem_energy = mem_cost
+
+        leb_distance = total_distance(
+            leb_routes,
+            dist
+        )
+
+        leb_time = total_time(
+            leb_routes,
+            time
+        )
+
+        leb_energy = leb_cost
+
         decision = agent.choose(
+
             {
-                "distance": mem_cost,
-                "time": mem_cost,
-                "energy": mem_cost
+                "distance": mem_distance,
+                "time": mem_time,
+                "energy": mem_energy
             },
+
             {
-                "distance": leb_cost,
-                "time": leb_cost,
-                "energy": leb_cost
+                "distance": leb_distance,
+                "time": leb_time,
+                "energy": leb_energy
             }
+
         )
 
         writer.writerow([
+
             exp + 1,
-            mem_cost,
-            leb_cost,
+
+            mem_distance,
+            mem_time,
+            mem_energy,
+
+            leb_distance,
+            leb_time,
+            leb_energy,
+
             decision["algorithm"]
+
         ])
 
-print("\nResults saved to results.csv")
+print(
+    "\nResults saved to results.csv"
+)
