@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from copy import deepcopy
 import joblib
+import folium
 
 if not hasattr(np, "float_"):
     np.float_ = np.float64
@@ -183,6 +184,54 @@ def carte_osm(n, G, chargers = 0, plot=False):
 
     return pts, m
 
+def draw_real(paths,pts,chargers = []):
+    colors = [
+        "red", "blue",
+        #"green",
+        "purple", "orange", "darkred", "cadetblue", "darkgreen"
+    ]
+
+    for i in range(len(pts)):
+        #print(pts[i])
+        pts[i] = [pts[i][1],pts[i][0]]
+        #print("\t",pts[i])
+    
+
+    routes = [[pts[a] for a in path] for path in paths]
+
+    m = folium.Map(location=pts[0], zoom_start=13)
+
+    #for route, color in zip(routes, colors):
+    for i, route in enumerate(routes):
+        color = colors[i]
+        #print(i,colors[i])
+        folium.PolyLine(route, color=color, weight=4).add_to(m)
+    
+    for c in chargers:
+        folium.CircleMarker(
+                location=pts[c],
+                radius=8,
+                color="darggreen",
+                fill=True,
+                fill_color="green",
+                fill_opacity=1.0,
+                weight=2,
+            ).add_to(m)
+    folium.CircleMarker(
+                location=pts[0],
+                radius=8,
+                color="darkred",
+                fill=True,
+                fill_color="red",
+                fill_opacity=1.0,
+                weight=2,
+            ).add_to(m)
+
+    m.save("routes.html")
+    print("Visualisation Saved to routes.html")
+
+#for AI calculating energy use
+
 def input_generator(size,speed_range = (1,120), max_slope = 10, temp_range=(-5,40), humidity_range=(20,90),wind_range=(0,15)):
     speed = np.zeros((size,size))
     for a in range(size):
@@ -292,11 +341,13 @@ def generate_map(nodes_num,chargers_num,type="random",size=5,city="Lille, France
 if __name__=="__main__":
     #print(carte(5,10,chargers=2,plot = True))
     
-    speed, slope, temp, road, humidity, wind, weather, traffic = input_generator(4)
+    """speed, slope, temp, road, humidity, wind, weather, traffic = input_generator(4)
     dist = np.ones((4,4))
-    print(battery_predictor(dist, speed, slope, temp, road, humidity, wind, weather, traffic))
+    print(battery_predictor(dist, speed, slope, temp, road, humidity, wind, weather, traffic))"""
 
     """pts,m = (carte(10,20,plot = True))
     draw([a for a in range(10)],pts)
     plt.show()"""
+
+    #print(generate_map(9,2,type="real")[0])
 

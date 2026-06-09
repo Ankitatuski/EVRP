@@ -419,7 +419,7 @@ if __name__ == "__main__":
 
     posize = 8
     iter = 100
-    batt = 5
+    batt = 500
 
     paths, cost = Memetic(posize,cities,dist, time,3,chargers,batt,DmSize=3,iter=iter,Mprob=0.8)
     print(chargers)
@@ -430,6 +430,9 @@ if __name__ == "__main__":
     print(feasibles(paths,dist,chargers,batt,details=True))
 
     map.drawVRP(paths,pts,chargers)
+    map.draw_real(paths,pts,chargers)
+
+    #print([[pts[a] for a in path] for path in paths])
 
     """paths, cos = Memetic(posize,cities,dist,DmSize=5,Ncars=3,iter=iter,tab=False)
     print(paths, cos )
