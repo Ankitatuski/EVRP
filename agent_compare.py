@@ -42,6 +42,7 @@ def total_time(routes, time_matrix):
 
 N = 15
 BATTERY = 5
+VEHICLES = 3
 
 pts, dist, time, chargers = map.generate_map(
     N,
@@ -51,7 +52,6 @@ pts, dist, time, chargers = map.generate_map(
 
 cities = [i for i in range(N)]
 
-
 print("\nRunning Memetic...")
 
 mem_routes, mem_cost = Memetic(
@@ -59,12 +59,11 @@ mem_routes, mem_cost = Memetic(
     cities,
     dist,
     time,
-    3,
+    VEHICLES,
     chargers,
     BATTERY,
     iter=50
 )
-
 
 print("\nRunning LeBaron...")
 
@@ -73,10 +72,9 @@ leb_routes, leb_cost = lebaron_vrp(
     time,
     chargers,
     BATTERY,
-    vehicles=3,
+    vehicles=VEHICLES,
     iterations=100
 )
-
 
 mem_distance = total_distance(
     mem_routes,
@@ -90,7 +88,6 @@ mem_time = total_time(
 
 mem_energy = mem_cost
 
-
 leb_distance = total_distance(
     leb_routes,
     dist
@@ -103,9 +100,7 @@ leb_time = total_time(
 
 leb_energy = leb_cost
 
-
 agent = EVRoutingAgent()
-
 
 decision = agent.choose(
 
@@ -123,7 +118,6 @@ decision = agent.choose(
 
 )
 
-
 print("\n==============================")
 print("MEMETIC")
 print("==============================")
@@ -131,7 +125,6 @@ print("==============================")
 print("Distance:", mem_distance)
 print("Time:", mem_time)
 print("Energy:", mem_energy)
-
 
 print("\n==============================")
 print("LEBARON")
@@ -141,9 +134,26 @@ print("Distance:", leb_distance)
 print("Time:", leb_time)
 print("Energy:", leb_energy)
 
-
 print("\n==============================")
 print("AI AGENT DECISION")
 print("==============================")
 
 print(decision)
+
+if decision["algorithm"] == "Memetic":
+
+    map.drawVRP(
+        mem_routes,
+        pts,
+        chargers,
+        title="AI Selected Memetic"
+    )
+
+else:
+
+    map.drawVRP(
+        leb_routes,
+        pts,
+        chargers,
+        title="AI Selected LeBaron"
+    )
