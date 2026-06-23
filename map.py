@@ -5,6 +5,7 @@ from matplotlib.ticker import MultipleLocator
 from copy import deepcopy
 import joblib
 import folium
+import requests
 
 if not hasattr(np, "float_"):
     np.float_ = np.float64
@@ -12,8 +13,9 @@ if not hasattr(np, "float_"):
 import osmnx as ox
 import networkx as nx
 
+#generate random map
 def carte(n, size, chargers=0, plot = False, full = True, time = False):
-    pts = points(n,abs(size))   #[x,y,demand/-charging_rate]
+    pts = points(n,abs(size))   #[x,y]
     m = distanceMatrix(pts)
 
     if full:
@@ -26,7 +28,6 @@ def carte(n, size, chargers=0, plot = False, full = True, time = False):
     indexes = [i for i in range(1,n)]
     for a in range(chargers):
         i = random.choice(indexes)
-        #pts[i][2] = -1
         chargers_list.append(i)
         indexes.remove(i)
 
@@ -43,13 +44,6 @@ def carte(n, size, chargers=0, plot = False, full = True, time = False):
         plt.grid(True)
         plt.show()
     if chargers>0:
-        """if time:
-            timetable = deepcopy(m)
-            for a in m:
-                for b in a:
-                    b*=random.uniform(0.9,1.1)
-            return pts,m,timetable,chargers_list"""
-
         return pts,m,chargers_list
     return pts,m
     
@@ -69,6 +63,7 @@ def distanceMatrix(p):
             m[a,b] = np.sqrt((p[a][0]-p[b][0])**2+(p[a][1]-p[b][1])**2)     #euclidean
     return m
 
+# plot on a gaph
 def draw(path, cords, chargers=[]):
     x = [cords[p][0] for p in path]
     y = [cords[p][1] for p in path]
@@ -184,7 +179,26 @@ def carte_osm(n, G, chargers = 0, plot=False):
 
     return pts, m
 
-def draw_real(paths,pts,chargers = []):
+#plot street
+def street(start, end, color,m):
+    url = (
+        f"https://router.project-osrm.org/route/v1/driving/"
+        f"{start[1]},{start[0]};{end[1]},{end[0]}"
+        "?overview=full&geometries=geojson"
+    )
+
+    data = requests.get(url).json()
+
+    coords = data["routes"][0]["geometry"]["coordinates"]
+
+    # OSRM returns [lon, lat], Folium expects [lat, lon]
+    route = [[lat, lon] for lon, lat in coords]
+
+    folium.PolyLine(route, color=color, weight=4).add_to(m)
+    return m
+
+#plot on the map
+def draw_real(paths,pts,chargers = [], filename="routes"):
     colors = [
         "red", "blue",
         #"green",
@@ -192,9 +206,7 @@ def draw_real(paths,pts,chargers = []):
     ]
 
     for i in range(len(pts)):
-        #print(pts[i])
         pts[i] = [pts[i][1],pts[i][0]]
-        #print("\t",pts[i])
     
 
     routes = [[pts[a] for a in path] for path in paths]
@@ -205,7 +217,19 @@ def draw_real(paths,pts,chargers = []):
     for i, route in enumerate(routes):
         color = colors[i]
         #print(i,colors[i])
-        folium.PolyLine(route, color=color, weight=4).add_to(m)
+        
+        for j in range(len(route)-1):
+            m = street(route[j],route[j+1],color,m)
+            folium.CircleMarker(
+                location=route[j],
+                radius=4,
+                color="black",
+                fill=True,
+                fill_color=color,
+                fill_opacity=1,
+                weight=1.2,
+            ).add_to(m)
+        #folium.PolyLine(route, color=color, weight=4).add_to(m)
     
     for c in chargers:
         folium.CircleMarker(
@@ -216,6 +240,7 @@ def draw_real(paths,pts,chargers = []):
                 fill_color="green",
                 fill_opacity=1.0,
                 weight=2,
+                tooltip="Charger",
             ).add_to(m)
     folium.CircleMarker(
                 location=pts[0],
@@ -225,10 +250,11 @@ def draw_real(paths,pts,chargers = []):
                 fill_color="red",
                 fill_opacity=1.0,
                 weight=2,
+                tooltip="Depot",
             ).add_to(m)
 
-    m.save("routes.html")
-    print("Visualisation Saved to routes.html")
+    m.save(filename+".html")
+    print("Visualisation Saved to "+filename+".html")
 
 #for AI calculating energy use
 
@@ -306,9 +332,7 @@ def battery_predictor(dist, speed, slope, temp, road, humidity, wind, weather, t
     for a in range(size):
         for b in range(size):
             if a!=b:
-                #print([speed[a][b], slope[a][b], temp[a][b], road[a][b], humidity[a][b], wind[a][b], weather[a][b], traffic[a][b]])
                 prediction = model.predict([[speed[a][b], slope[a][b], temp[a][b], road[a][b], humidity[a][b], wind[a][b], weather[a][b], traffic[a][b]]])
-                #print(a,b,prediction[0])
                 dist[a][b]*=prediction
     return dist
 
@@ -322,7 +346,8 @@ def time_prdictor(dist,speed):
                 time[a][b] = (dist[a][b]/speed[a][b])/60    #minutes
     return time
 
-def generate_map(nodes_num,chargers_num,type="random",size=5,city="Lille, France", parameters = "random"):
+#combined and simple map generator
+def generate_map(nodes_num,chargers_num,type="random",size=5,city="Lille, France", parameters = "random", filename="routes"):
     if parameters == "random":
         speed, slope, temp, road, humidity, wind, weather, traffic = input_generator(nodes_num)
     if type == "random":
@@ -338,16 +363,5 @@ def generate_map(nodes_num,chargers_num,type="random",size=5,city="Lille, France
 
 
 
-if __name__=="__main__":
-    #print(carte(5,10,chargers=2,plot = True))
-    
-    """speed, slope, temp, road, humidity, wind, weather, traffic = input_generator(4)
-    dist = np.ones((4,4))
-    print(battery_predictor(dist, speed, slope, temp, road, humidity, wind, weather, traffic))"""
-
-    """pts,m = (carte(10,20,plot = True))
-    draw([a for a in range(10)],pts)
-    plt.show()"""
-
-    #print(generate_map(9,2,type="real")[0])
+#if __name__=="__main__":
 
